@@ -40,12 +40,8 @@ year          = {2023},
 
 
 # Docker/Environment setup
-- To get the docker image, there are two options.
+- Build the docker image (this only needs to do once and can take some time).
 ```
-# Option 1
-docker pull nvcr.io/nvidian/bundlesdf
-
-# Option 2: build from scratch
 cd docker
 docker build --network host -t nvcr.io/nvidian/bundlesdf .
 ```
@@ -70,16 +66,16 @@ root
 
 Due to license issues, we are not able to include [XMem](https://github.com/hkchengrex/XMem) in this codebase for running segmentation online. If you are interested in doing so, please download the code separately and add a wrapper in `segmentation_utils.py`.
 
-- Run your RGBD video (specify the video_dir and your desired output path). There are 3 steps.
+- Run your RGBD video (specify the video_dir and your desired output path). There are 3 steps. Note we assume the max relevant depth in the demo data <1. If this is not the case for you, change it [here](https://github.com/NVlabs/BundleSDF/blob/master/BundleTrack/config_ho3d.yml#L16)
 ```
-# 1) Run joint tracking and reconstruction
+# 1) Run joint tracking and reconstruction. 
 python run_custom.py --mode run_video --video_dir /home/bowen/debug/2022-11-18-15-10-24_milk --out_folder /home/bowen/debug/bundlesdf_2022-11-18-15-10-24_milk --use_segmenter 1 --use_gui 1 --debug_level 2
 
-# 2) (Optinal) Run global refinement post-processing to refine the mesh
+# 2) Run global refinement post-processing to refine the mesh
 python run_custom.py --mode global_refine --video_dir /home/bowen/debug/2022-11-18-15-10-24_milk --out_folder /home/bowen/debug/bundlesdf_2022-11-18-15-10-24_milk   # Change the path to your video_directory
 
-# 3) Get the auto-cleaned mesh
-python run_custom.py --mode get_mesh --video_dir /home/bowen/debug/2022-11-18-15-10-24_milk --out_folder /home/bowen/debug/bundlesdf_2022-11-18-15-10-24_milk
+# 3) (Optional) If you want to draw the oriented bounding box to visualize the pose, similar to our demo
+python run_custom.py --mode draw_pose --out_folder /home/bowen/debug/bundlesdf_2022-11-18-15-10-24_milk
 ```
 
 - Finally the results will be dumped in the `out_folder`, including the tracked poses stored in `ob_in_cam/` and reconstructed mesh with texture `textured_mesh.obj`.

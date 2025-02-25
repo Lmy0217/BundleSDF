@@ -22,7 +22,6 @@ def run_one_video(video_dir='/home/bowen/debug/2022-11-18-15-10-24_milk', out_fo
 
   cfg_bundletrack = yaml.load(open(f"{code_dir}/BundleTrack/config_ho3d.yml",'r'))
   cfg_bundletrack['SPDLOG'] = int(args.debug_level)
-  cfg_bundletrack['depth_processing']["zfar"] = 1
   cfg_bundletrack['depth_processing']["percentile"] = 95
   cfg_bundletrack['erode_mask'] = 3
   cfg_bundletrack['debug_dir'] = out_folder+'/'
@@ -188,9 +187,29 @@ def postprocess_mesh(out_folder):
   mesh.export(f'{out_folder}/mesh/mesh_biggest_component_smoothed.obj')
 
 
+
+def draw_pose():
+  K = np.loadtxt(f'{args.out_folder}/cam_K.txt').reshape(3,3)
+  color_files = sorted(glob.glob(f'{args.out_folder}/color/*'))
+  mesh = trimesh.load(f'{args.out_folder}/textured_mesh.obj')
+  to_origin, extents = trimesh.bounds.oriented_bounds(mesh)
+  bbox = np.stack([-extents/2, extents/2], axis=0).reshape(2,3)
+  out_dir = f'{args.out_folder}/pose_vis'
+  os.makedirs(out_dir, exist_ok=True)
+  logging.info(f"Saving to {out_dir}")
+  for color_file in color_files:
+    color = imageio.imread(color_file)
+    pose = np.loadtxt(color_file.replace('.png','.txt').replace('color','ob_in_cam'))
+    pose = pose@np.linalg.inv(to_origin)
+    vis = draw_posed_3d_box(K, color, ob_in_cam=pose, bbox=bbox, line_color=(255,255,0))
+    id_str = os.path.basename(color_file).replace('.png','')
+    imageio.imwrite(f'{out_dir}/{id_str}.png', vis)
+
+
+
 if __name__=="__main__":
   parser = argparse.ArgumentParser()
-  parser.add_argument('--mode', type=str, default="run_video", help="run_video / global_refine / get_mesh")
+  parser.add_argument('--mode', type=str, default="run_video", help="run_video/global_refine/draw_pose")
   parser.add_argument('--video_dir', type=str, default="/home/bowen/debug/2022-11-18-15-10-24_milk/")
   parser.add_argument('--out_folder', type=str, default="/home/bowen/debug/bundlesdf_2022-11-18-15-10-24_milk")
   parser.add_argument('--use_segmenter', type=int, default=0)
@@ -203,7 +222,7 @@ if __name__=="__main__":
     run_one_video(video_dir=args.video_dir, out_folder=args.out_folder, use_segmenter=args.use_segmenter, use_gui=args.use_gui)
   elif args.mode=='global_refine':
     run_one_video_global_nerf(out_folder=args.out_folder)
-  elif args.mode=='get_mesh':
-    postprocess_mesh(out_folder=args.out_folder)
+  elif args.mode=='draw_pose':
+    draw_pose()
   else:
     raise RuntimeError
